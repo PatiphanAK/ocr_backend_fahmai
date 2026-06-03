@@ -1,6 +1,9 @@
 from typing import Any, Dict, List
 
-from models import get_layout_model, get_ocr
+import numpy as np
+
+from items import OCRRow
+from models import get_ocr, run_dolphin_vllm
 
 PDF_RENDER_ZOOM = 2.0
 
@@ -15,7 +18,7 @@ def load_document(document: bytes) -> List[Dict[str, Any]]:
         return _render_pdf(document)
     try:
         image = Image.open(BytesIO(document)).convert("RGB")
-    except Exception as exc:  # noqa: BLE001 - surface a clear, actionable error
+    except Exception as exc:
         preview = document[:16].hex()
         raise ValueError(
             "decoded bytes are not a readable image or PDF "
@@ -43,15 +46,19 @@ def _render_pdf(document: bytes) -> List[Dict[str, Any]]:
     return pages
 
 
-def detect_layout(pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Run Dolphin-1.5 layout detection on each page."""
-    model = get_layout_model()
+def detect_layout(
+    pages: List[Dict[str, Any]],
+    vllm_engine,
+    processor,
+) -> List[Dict[str, Any]]:
     layout = []
     for page in pages:
-        result = model.detect(page["image"])
+        result = run_dolphin_vllm(page["image"], vllm_engine, processor)
         result["page_index"] = page["index"]
         layout.append(result)
-    print(f"[DEBUG] layout: {len(layout)} pages, elements: {[len(p.get('elements',[])) for p in layout]}")
+    print(
+        f"[DEBUG] layout: {len(layout)} pages, elements: {[len(p.get('elements', [])) for p in layout]}"
+    )
     return layout
 
 
@@ -98,34 +105,31 @@ def crop_regions(
     return crops
 
 
-def run_ocr(crops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Run PaddleOCR on each crop, attaching ocr_text and text_lines."""
-    import numpy as np
-
+def run_ocr(crops: List[Dict[str, Any]]) -> List[OCRRow]:
     ocr = get_ocr()
-    rows: List[Dict[str, Any]] = []
-    for crop in crops:
-        # PaddleOCR consumes BGR ndarrays; PIL crops are RGB.
-        array = np.asarray(crop["image"])[:, :, ::-1]
+    if not crops:
+        return []
+    arrays = [np.asarray(c["image"])[:, :, ::-1] for c in crops]
+    rows: List[OCRRow] = []
+    for crop, array in zip(crops, arrays):
         try:
             text, lines = _ocr_array(ocr, array)
             ok, error = True, ""
-        except Exception as exc:  # noqa: BLE001 - keep one bad crop from failing the page
+        except Exception as exc:
             text, lines = "", []
             ok, error = False, repr(exc)
-        print(f"[DEBUG] crop {crop['label']} reading_order={crop['reading_order']} text={repr(text[:100])}")
         rows.append(
-            {
-                "page_index": crop["page_index"],
-                "label": crop["label"],
-                "reading_order": crop["reading_order"],
-                "bbox": crop["bbox"],
-                "padded_box": crop["padded_box"],
-                "ocr_text": text,
-                "text_lines": lines,
-                "ok": ok,
-                "error": error,
-            }
+            OCRRow(
+                page_index=crop["page_index"],
+                label=crop["label"],
+                reading_order=crop["reading_order"],
+                bbox=crop["bbox"],
+                padded_box=crop["padded_box"],
+                ocr_text=text,
+                text_lines=lines,
+                ok=ok,
+                error=error,
+            )
         )
     return rows
 
@@ -180,9 +184,9 @@ def _extract_ocr_fields(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {"text_lines": lines, "ocr_text": "\n".join(str(t) for t in texts)}
 
 
-def sort_reading_order(ocr_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def sort_reading_order(ocr_rows: List[OCRRow]) -> List[OCRRow]:
     """Keep crops in layout reading order: page first, then reading_order."""
     return sorted(
         ocr_rows,
-        key=lambda row: (row.get("page_index", 0), row.get("reading_order", 0)),
+        key=lambda row: (row.page_index, row.reading_order),
     )

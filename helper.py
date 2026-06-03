@@ -19,21 +19,21 @@ def check_it_decode(req: APIRequest) -> bytes:
     raw += "=" * (-len(raw) % 4)
 
     try:
-        document = base64.b64decode(raw, validate=True)
+        img_byte = base64.b64decode(raw, validate=True)
     except (binascii.Error, ValueError) as e:
         raise HTTPException(
             status_code=400, detail=f"transaction is not valid base64: {e}"
         )
 
-    if not document:
+    if not img_byte:
         raise HTTPException(
             status_code=400, detail="transaction decoded to empty bytes"
         )
-    is_pdf = document[:4] == b"%PDF"
+    is_pdf = img_byte[:4] == b"%PDF"
     is_image = False
     if not is_pdf:
         try:
-            Image.open(BytesIO(document)).verify()
+            Image.open(BytesIO(img_byte)).verify()
             is_image = True
         except Exception:
             is_image = False
@@ -41,6 +41,6 @@ def check_it_decode(req: APIRequest) -> bytes:
     if not is_pdf and not is_image:
         raise HTTPException(
             status_code=400,
-            detail=f"transaction is not a valid image or PDF (first16=0x{document[:16].hex()})",
+            detail=f"transaction is not a valid image or PDF (first16=0x{img_byte[:16].hex()})",
         )
-    return document
+    return img_byte
