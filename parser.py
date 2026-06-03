@@ -32,6 +32,7 @@ def normalize_date_slash(value: str) -> str:
 def parse_fields(ordered_rows: List[Dict[str, Any]]) -> Dict[str, str]:
     """Extract the structured invoice fields from ordered OCR rows."""
     text = all_text(ordered_rows)
+    print(f"[DEBUG] full text:\n{text}")
 
     vendor_invoice_id = first_regex(r"V-\d{3}-INV-\d{4}-\d+", text)
     vendor_id = first_regex(r"\bV-\d{3}\b", vendor_invoice_id) or first_regex(

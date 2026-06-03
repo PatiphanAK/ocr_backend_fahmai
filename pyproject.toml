@@ -15,4 +15,5 @@ dependencies = [
     "torch>=2.12.0",
     "python-dotenv",
     "uvicorn",
+    "paddlepaddle>=3.3.1",
 ]

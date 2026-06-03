@@ -51,6 +51,7 @@ def detect_layout(pages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         result = model.detect(page["image"])
         result["page_index"] = page["index"]
         layout.append(result)
+    print(f"[DEBUG] layout: {len(layout)} pages, elements: {[len(p.get('elements',[])) for p in layout]}")
     return layout
 
 
@@ -93,6 +94,7 @@ def crop_regions(
                     "image": image.crop(box),
                 }
             )
+    print(f"[DEBUG] crops: {len(crops)}")
     return crops
 
 
@@ -111,6 +113,7 @@ def run_ocr(crops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         except Exception as exc:  # noqa: BLE001 - keep one bad crop from failing the page
             text, lines = "", []
             ok, error = False, repr(exc)
+        print(f"[DEBUG] crop {crop['label']} reading_order={crop['reading_order']} text={repr(text[:100])}")
         rows.append(
             {
                 "page_index": crop["page_index"],
