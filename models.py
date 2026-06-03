@@ -28,7 +28,7 @@ class DolphinLayout:
         self.model = AutoModelForImageTextToText.from_pretrained(
             model_path,
             trust_remote_code=True,
-            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+            torch_dtype=torch.bfloat16 if self.device == "cuda" else torch.float32,
         ).to(self.device)
         self.model.eval()
 
@@ -37,6 +37,12 @@ class DolphinLayout:
 
         width, height = image.size
         inputs = self.processor(images=image, return_tensors="pt").to(self.device)
+        # The model may be fp16 (on CUDA) while the processor emits fp32
+        # pixel_values; cast the image tensor to the model dtype so the
+        # conv layers don't hit a float/half mismatch. Leave integer
+        # tensors (input_ids, attention_mask) untouched.
+        if "pixel_values" in inputs:
+            inputs["pixel_values"] = inputs["pixel_values"].to(self.model.dtype)
         with torch.no_grad():
             generated = self.model.generate(**inputs, max_new_tokens=4096)
         decoded = self.processor.batch_decode(generated, skip_special_tokens=True)[0]

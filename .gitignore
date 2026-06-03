@@ -11,3 +11,9 @@ wheels/
 
 # Environment config
 .env
+
+# Large data / generated artifacts
+ocr_extracted.json
+unique.log
+request.json
+.DS_Store
