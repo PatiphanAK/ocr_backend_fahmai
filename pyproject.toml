@@ -17,5 +17,5 @@ dependencies = [
     "uvicorn",
     "paddlepaddle>=3.3.1",
     "paddlepaddle-gpu",
-    "vllm",
+    "vllm==0.10.2",
 ]
