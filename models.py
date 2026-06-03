@@ -3,11 +3,9 @@ import os
 import re
 
 import torch
-from transformers import AutoModelForVision2Seq, AutoProcessor
+from transformers import AutoModelForImageTextToText, AutoProcessor
 
-DOLPHIN_MODEL_PATH = os.environ.get(
-    "DOLPHIN_MODEL_PATH", "/home/ub113/Dolphin-1.5/hf_model"
-)
+DOLPHIN_MODEL_PATH = os.environ.get("DOLPHIN_MODEL_PATH", "ByteDance/Dolphin")
 DOLPHIN_ALPHA = float(os.environ.get("DOLPHIN_ALPHA", "0.25"))
 
 OCR_DEVICE = os.environ.get("OCR_DEVICE", "gpu:0")
@@ -27,7 +25,7 @@ class DolphinLayout:
         self.processor = AutoProcessor.from_pretrained(
             model_path, trust_remote_code=True
         )
-        self.model = AutoModelForVision2Seq.from_pretrained(
+        self.model = AutoModelForImageTextToText.from_pretrained(
             model_path,
             trust_remote_code=True,
             torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,

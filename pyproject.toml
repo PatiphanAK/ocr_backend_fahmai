@@ -10,7 +10,6 @@ dependencies = [
     "pillow",
     "numpy",
     "pymupdf",
-    "paddlepaddle-gpu",
     "transformers>=5.9.0",
     "paddleocr>=3.4.1",
     "torch>=2.12.0",
