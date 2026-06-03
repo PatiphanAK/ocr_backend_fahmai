@@ -55,12 +55,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.get("/health_be3")
+@app.get("/ocr/health_be3")
 def health_check():
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
 
-@app.post("/ocr", response_model=APIResponse)
+@app.post("/ocr/ocr", response_model=APIResponse)
 async def ocr(req: APIRequest):
     img_byte = check_it_decode(req)
     pages = load_document(img_byte)
