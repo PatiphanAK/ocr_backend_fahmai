@@ -55,7 +55,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-@app.get("/health")
+@app.get("/health_be3")
 def health_check():
     return JSONResponse(content={"status": "healthy"}, status_code=200)
 
