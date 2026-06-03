@@ -106,12 +106,20 @@ def crop_regions(
 
 
 def run_ocr(crops: List[Dict[str, Any]]) -> List[OCRRow]:
+    import os
+
+    DEBUG_DIR = "/content/ocr_backend_fahmai/debug_crops"
+    os.makedirs(DEBUG_DIR, exist_ok=True)
+
     ocr = get_ocr()
     if not crops:
         return []
     arrays = [np.asarray(c["image"])[:, :, ::-1] for c in crops]
     rows: List[OCRRow] = []
-    for crop, array in zip(crops, arrays):
+    for i, (crop, array) in enumerate(zip(crops, arrays)):
+        path = f"{DEBUG_DIR}/crop_{i:02d}_{crop['label']}.png"
+        crop["image"].save(path)
+        print(f"[DEBUG] saved {path} | size={crop['image'].size} bbox={crop['bbox']}")
         try:
             text, lines = _ocr_array(ocr, array)
             ok, error = True, ""
