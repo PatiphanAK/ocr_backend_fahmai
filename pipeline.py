@@ -11,9 +11,16 @@ def load_document(document: bytes) -> List[Dict[str, Any]]:
 
     from PIL import Image
 
-    if document[:5] == b"%PDF-":
+    if b"%PDF-" in document[:1024]:
         return _render_pdf(document)
-    image = Image.open(BytesIO(document)).convert("RGB")
+    try:
+        image = Image.open(BytesIO(document)).convert("RGB")
+    except Exception as exc:  # noqa: BLE001 - surface a clear, actionable error
+        preview = document[:16].hex()
+        raise ValueError(
+            "decoded bytes are not a readable image or PDF "
+            f"(len={len(document)}, first16=0x{preview}): {exc}"
+        ) from exc
     return [{"index": 0, "image": image}]
 
 
