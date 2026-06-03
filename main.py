@@ -26,8 +26,9 @@ MODEL_ID = "ByteDance/Dolphin"
 processor = DonutProcessor.from_pretrained(MODEL_ID)
 vllm_engine = LLM(
     model=MODEL_ID,
-    dtype="float16",
+    dtype="bfloat16",
     max_num_seqs=8,
+    gpu_memory_utilization=0.5,
     hf_overrides={"architectures": ["DonutForConditionalGeneration"]},
 )
 ENCODER_PROMPT_STATIC = "".join(["0"] * 783)
