@@ -1,0 +1,17 @@
+[project]
+name = "open"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi[standard]",
+    "pydantic",
+    "pillow",
+    "numpy",
+    "pymupdf",
+    "paddlepaddle-gpu",
+    "transformers>=5.9.0",
+    "paddleocr>=3.4.1",
+    "torch>=2.12.0",
+]
