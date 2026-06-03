@@ -1,8 +1,11 @@
 import base64
 import binascii
 import re
+from io import BytesIO
 
 from fastapi import HTTPException
+from PIL import Image
+
 from items import APIRequest
 
 _DATA_URI_PREFIX = re.compile(r"^data:[^;,]*(;[^;,]+)*;base64,", re.IGNORECASE)
@@ -10,24 +13,34 @@ _DATA_URI_PREFIX = re.compile(r"^data:[^;,]*(;[^;,]+)*;base64,", re.IGNORECASE)
 
 def check_it_decode(req: APIRequest) -> bytes:
     raw = req.transaction or ""
-
-    # Drop a data-URI prefix (e.g. "data:image/png;base64,") if present.
     raw = _DATA_URI_PREFIX.sub("", raw.strip())
-    # Remove any whitespace/newlines the client may have inserted.
     raw = re.sub(r"\s+", "", raw)
-    # Normalise URL-safe base64 (-/_ -> +//) back to the standard alphabet.
     raw = raw.replace("-", "+").replace("_", "/")
-    # Restore missing padding.
     raw += "=" * (-len(raw) % 4)
 
     try:
-        # validate=True so malformed input raises instead of silently
-        # discarding bytes and producing an unreadable "image".
         document = base64.b64decode(raw, validate=True)
     except (binascii.Error, ValueError) as e:
-        raise HTTPException(status_code=400, detail=f"transaction is not valid base64: {e}")
+        raise HTTPException(
+            status_code=400, detail=f"transaction is not valid base64: {e}"
+        )
 
     if not document:
-        raise HTTPException(status_code=400, detail="transaction decoded to empty bytes")
+        raise HTTPException(
+            status_code=400, detail="transaction decoded to empty bytes"
+        )
+    is_pdf = document[:4] == b"%PDF"
+    is_image = False
+    if not is_pdf:
+        try:
+            Image.open(BytesIO(document)).verify()
+            is_image = True
+        except Exception:
+            is_image = False
 
+    if not is_pdf and not is_image:
+        raise HTTPException(
+            status_code=400,
+            detail=f"transaction is not a valid image or PDF (first16=0x{document[:16].hex()})",
+        )
     return document
